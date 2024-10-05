@@ -1,4 +1,4 @@
-flags := "-Wall -ggdb -Wextra -Wpedantic -lraylib -lbox2d -I./include/ -lm"
+flags := "-Wall -ggdb -Wextra -Wpedantic -I./include/raylib -L./include/raylib/ -lraylib -lbox2d -lm"
 default: build
 	./build/2d
 
