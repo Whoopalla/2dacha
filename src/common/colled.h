@@ -30,3 +30,4 @@ typedef struct {
 } Colliders;
 
 Prefab DeserializePrefab(char path[MAX_PATH]);
+void SerializePrefab(Prefab *prefab, char path[MAX_PATH]);

@@ -7,7 +7,7 @@
 #include <stdlib.h>
 
 #include <assert.h>
-#include "colled/colled.h"
+#include "colled.h"
 
 #define GROUND_CUBES_COUNT 10
 
