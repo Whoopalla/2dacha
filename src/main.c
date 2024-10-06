@@ -101,7 +101,7 @@ int main(void) {
   b2Polygon wheelPolygon = b2MakeBox(wheelExtent.x, wheelExtent.y);
   b2Polygon groundPolygon = b2MakeBox(groundExtent.x, groundExtent.y);
   boxPolygon = b2MakeBox(boxExtent.x, boxExtent.y);
-  prefab = DeserializePrefab("./res/prefabs/wheel.prefab");
+  wheelPrefab = DeserializePrefab("./res/prefabs/wheel.prefab");
 
   for (size_t i = 0; i < GROUND_CUBES_COUNT; i++) {
     Entity *ground = &entities[entity_count++];
