@@ -35,7 +35,7 @@ Prefab wheelPrefab;
 
 Texture groundTexture, boxTexture, nivaTexture, wheelTexture;
 
-void create_body(Vector2 loc) {
+static void create_body(Vector2 loc) {
   printf("New body created at x: %f y: %f\n", loc.x, loc.y);
   Entity *entity = entities + entity_count++;
   entity->prefab = wheelPrefab;
@@ -49,7 +49,7 @@ void create_body(Vector2 loc) {
   b2CreatePolygonShape(entity->bodyId, &shapeDef, &boxPolygon);
 }
 
-void DrawEntity(const Entity *entity) {
+static void DrawEntity(const Entity *entity) {
   b2Vec2 p = b2Body_GetWorldPoint(
       entity->bodyId, (b2Vec2){-entity->extent.x, -entity->extent.y});
   b2Rot rotation = b2Body_GetRotation(entity->bodyId);

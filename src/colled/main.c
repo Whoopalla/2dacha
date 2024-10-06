@@ -34,7 +34,7 @@ const int windowHeight = 1000;
 
 Prefab prevPrefab;
 char currentTexturePath[MAX_PATH];
-char *selectFileDialog(char *dest) {
+static char *selectFileDialog(char *dest) {
   GuiWindowFileDialogState fileDialogState =
       InitGuiWindowFileDialog(GetWorkingDirectory());
 
@@ -69,7 +69,7 @@ char *selectFileDialog(char *dest) {
   return dest;
 }
 
-void mouseNavigation(Camera2D *camera, int zoomMode) {
+static void mouseNavigation(Camera2D *camera, int zoomMode) {
   if (IsKeyPressed(KEY_ONE))
     zoomMode = 0;
   else if (IsKeyPressed(KEY_TWO))
@@ -128,7 +128,7 @@ void mouseNavigation(Camera2D *camera, int zoomMode) {
   }
 }
 
-void updateColliders(CollidersEditor *cEditor, Camera2D camera) {
+static void updateColliders(CollidersEditor *cEditor, Camera2D camera) {
   Vector2 mousePos = GetScreenToWorld2D(GetMousePosition(), camera);
 
   // Input
@@ -183,7 +183,7 @@ void updateColliders(CollidersEditor *cEditor, Camera2D camera) {
   }
 }
 
-void SavePrefab(Prefab *prefab) {
+static void SavePrefab(Prefab *prefab) {
   char path[MAX_PATH];
   printf("Saving prefab with texture path: %s\n", prefab->texturePath);
   sprintf(path, "./res/prefabs/%s.prefab",
