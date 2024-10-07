@@ -189,9 +189,6 @@ static void SavePrefab(Prefab *prefab) {
   sprintf(path, "./res/prefabs/%s.prefab",
           GetFileNameWithoutExt(prefab->texturePath));
   SerializePrefab(prefab, path);
-  FILE *f = fopen(path, "w+");
-  
-  fclose(f);
   printf("Prefa serialized succsessfully\n");
 }
 
@@ -242,10 +239,13 @@ int main(void) {
       selectFileDialog(prefabPath);
       if (IsFileExtension(prefabPath, ".prefab")) {
         prevPrefab = cEditor.prefab;
-        cEditor.prefab = DeserializePrefab(prefabPath);
-        UnloadTexture(currentTexture);
-        currentTexture = LoadTexture(cEditor.prefab.texturePath);
-        printf("Selected prefab path: %s\n", prefabPath);
+        if (DeserializePrefab(prefabPath, &cEditor.prefab) == 0) {
+          UnloadTexture(currentTexture);
+          currentTexture = LoadTexture(cEditor.prefab.texturePath);
+          printf("Selected prefab path: %s\n", prefabPath);
+        } else {
+          cEditor.prefab = prevPrefab;
+        }
       } else {
         printf("Selected prefab path: %s\n", prefabPath);
         printf("Select file with .prefab extension\n");
@@ -284,11 +284,6 @@ int main(void) {
                               100},
                   "Save Prefab")) {
       SavePrefab(&cEditor.prefab);
-      char dp[MAX_PATH];
-      sprintf(dp, "./res/prefabs/%s.prefab",
-              GetFileNameWithoutExt(currentTexturePath));
-      printf("Deserializing: %s\n", dp);
-      DeserializePrefab(dp);
     }
 
     BeginMode2D(camera);

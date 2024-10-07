@@ -71,6 +71,17 @@ static void DrawEntity(const Entity *entity) {
   //  DrawCircleV(ps, 5.0f, RED);
 }
 
+static void freeAndExit(void) {
+  UnloadTexture(wheelTexture); 
+  UnloadTexture(nivaTexture);
+  UnloadTexture(groundTexture);
+  UnloadTexture(boxTexture);
+
+  b2DestroyWorld(worldId);
+
+  CloseWindow();
+}
+
 int main(void) {
   InitWindow(width, height, "box2d-raylib");
 
@@ -84,6 +95,7 @@ int main(void) {
   worldDef.gravity.y = 9.8f * lengthUnitsPerMeter;
   worldId = b2CreateWorld(&worldDef);
 
+  system("pwd");
   nivaTexture = LoadTexture("./res/niva.png");
   wheelTexture = LoadTexture("./res/wheel.png");
   boxTexture = LoadTexture("./res/box.png");
@@ -101,7 +113,9 @@ int main(void) {
   b2Polygon wheelPolygon = b2MakeBox(wheelExtent.x, wheelExtent.y);
   b2Polygon groundPolygon = b2MakeBox(groundExtent.x, groundExtent.y);
   boxPolygon = b2MakeBox(boxExtent.x, boxExtent.y);
-  wheelPrefab = DeserializePrefab("./res/prefabs/wheel.prefab");
+  if (DeserializePrefab("./res/prefabs/wheel.prefab", &wheelPrefab) != 0) {
+    
+  }
 
   for (size_t i = 0; i < GROUND_CUBES_COUNT; i++) {
     Entity *ground = &entities[entity_count++];
@@ -218,10 +232,7 @@ int main(void) {
     EndDrawing();
   }
 
-  UnloadTexture(groundTexture);
-  UnloadTexture(boxTexture);
-
-  CloseWindow();
+  freeAndExit();
 
   return 0;
 }

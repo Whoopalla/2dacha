@@ -29,5 +29,5 @@ typedef struct {
   CircleColliders circleColliders;
 } Colliders;
 
-Prefab DeserializePrefab(char path[MAX_PATH]);
-void SerializePrefab(Prefab *prefab, char path[MAX_PATH]);
+int DeserializePrefab(char path[MAX_PATH], Prefab *res);
+int SerializePrefab(Prefab *prefab, char path[MAX_PATH]);
