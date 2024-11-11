@@ -5,19 +5,24 @@
 int DeserializePrefab(char path[MAX_PATH], Prefab *res) {
   FILE *f = fopen(path, "r");
   if (f == NULL) {
-    printf("ERROR: could not open prefab for read");
-    fclose(f);
+    perror("ERROR: could not open prefab for read");
     return -1;
   }
   if (fread(&(res->texturePath), 1, MAX_PATH, f) != MAX_PATH) {
-    perror("ERROR: deserializing prefab");
+    perror("ERROR: deserializing prefab path");
     fclose(f);
     return -1;
   }
   printf("Deserialized texture path: %s\n", res->texturePath);
-  if (fread(&(res->circleColliders), sizeof(CircleCollider),
-            MAX_COLLIDERS_COUNT, f) != MAX_COLLIDERS_COUNT) {
-    perror("ERROR: deserializing prefab");
+  if (fread(&(res->circleColliders), sizeof(CircleCollider), MAX_COLLIDERS_COUNT, f) !=
+      MAX_COLLIDERS_COUNT) {
+    perror("ERROR: deserializing prefab circles");
+    fclose(f);
+    return -1;
+  }
+  if (fread(&(res->circleColliders.count), sizeof(res->circleColliders.count), 1, f) !=
+      1) {
+    perror("ERROR: deserializing prefab circles count");
     fclose(f);
     return -1;
   }
@@ -39,12 +44,20 @@ int SerializePrefab(Prefab *prefab, char path[MAX_PATH]) {
     return -1;
   }
   if (fwrite(prefab->texturePath, 1, MAX_PATH, f) == 0) {
-    perror("ERROR: serializing prefab");
+    perror("ERROR: serializing prefab path");
+    fclose(f);
     return -1;
   }
-  if (fwrite(prefab->circleColliders.colliders, sizeof(CircleCollider),
-             MAX_COLLIDERS_COUNT, f) != MAX_COLLIDERS_COUNT) {
-    perror("ERROR: serializing prefab");
+  if (fwrite(prefab->circleColliders.colliders, sizeof(CircleCollider), MAX_COLLIDERS_COUNT,
+             f) != MAX_COLLIDERS_COUNT) {
+    perror("ERROR: serializing prefab circles");
+    fclose(f);
+    return -1;
+  }
+  if (fwrite(&prefab->circleColliders.count, sizeof(prefab->circleColliders.count), 1,
+             f) != 1) {
+    perror("ERROR: serializing prefab circle count");
+    fclose(f);
     return -1;
   }
   fclose(f);

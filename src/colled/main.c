@@ -14,7 +14,7 @@
 #define GUI_WINDOW_FILE_DIALOG_IMPLEMENTATION
 #include "gui_window_file_dialog.h"
 
-#define COLLIDER_DEFAULT_COLOR ROSE
+#define DEFAULT_COLLIDER_COLLOR ROSE
 
 #define ROSE GetColor(0xFF006E7C)
 #define AMBER GetColor(0xFFBE0B7C)
@@ -31,6 +31,14 @@ typedef struct {
 
 const int windowWidth = 1600;
 const int windowHeight = 1000;
+
+Rectangle windowRec = {0, 0, windowWidth, windowHeight};
+Rectangle viewRec = {0, 0, (int)windowWidth * 0.75f, windowHeight};
+Rectangle controlRec = {(int)windowWidth * 0.75f, 0, (int)windowWidth * 0.25f,
+                        windowHeight};
+Vector2 scalingPoint;
+Vector2 scalingAnchorSize = {50.0f, 50.0f};
+Vector2 scalingAnchorPos;
 
 Prefab prevPrefab;
 char currentTexturePath[MAX_PATH];
@@ -128,57 +136,126 @@ static void mouseNavigation(Camera2D *camera, int zoomMode) {
   }
 }
 
-static void updateColliders(CollidersEditor *cEditor, Camera2D camera) {
+static void updateColliders(CollidersEditor *Editor, Camera2D camera) {
   Vector2 mousePos = GetScreenToWorld2D(GetMousePosition(), camera);
+  Vector2 mousePosWindow = GetWorldToScreen2D(mousePos, camera);
 
   // Input
   if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
-    for (int i = 0; i < MAX_COLLIDERS_COUNT; i++) {
+    // So that click on control panel would not deselect elem
+    if (CheckCollisionPointRec(mousePosWindow, viewRec)) {
+      Editor->selectedIndex = -1;
+      Editor->selectedType = -1;
+    }
+    Editor->dragPoint = (Vector2){0.0f, 0.0f};
+    for (int i = 0; i < Editor->prefab.circleColliders.count; i++) {
       if (CheckCollisionPointCircle(
-              mousePos, cEditor->prefab.circleColliders.colliders[i].center,
-              cEditor->prefab.circleColliders.colliders[i].radius)) {
-        cEditor->selectedIndex = i;
-        cEditor->dragPoint = Vector2Subtract(
-            mousePos, cEditor->prefab.circleColliders.colliders[i].center);
+              mousePos, Editor->prefab.circleColliders.colliders[i].center,
+              Editor->prefab.circleColliders.colliders[i].radius)) {
+        Editor->selectedType = Circle;
+        Editor->selectedIndex = i;
+        Editor->dragPoint = Vector2Subtract(
+            mousePos, Editor->prefab.circleColliders.colliders[i].center);
         break;
-      } else {
-        cEditor->selectedIndex = -1;
+      }
+    }
+    for (int i = 0; i < Editor->prefab.boxColliders.count; i++) {
+      if (CheckCollisionPointRec(
+              mousePos,
+              (Rectangle){Editor->prefab.boxColliders.colliders[i].pos.x,
+                          Editor->prefab.boxColliders.colliders[i].pos.y,
+                          Editor->prefab.boxColliders.colliders[i].size.x,
+                          Editor->prefab.boxColliders.colliders[i].size.y})) {
+
+        Editor->selectedType = Box;
+        Editor->selectedIndex = i;
+        Editor->dragPoint = Vector2Subtract(
+            mousePos, Editor->prefab.boxColliders.colliders[i].pos);
+        break;
       }
     }
   }
 
-  if (!cEditor->scalingMode && IsKeyDown(KEY_LEFT_CONTROL) &&
-      IsKeyPressed(KEY_S) && cEditor->selectedIndex != -1) {
-    cEditor->scalingMode = true;
+  // Scaling mode
+  if (Editor->selectedIndex != -1 && !Editor->scalingMode) {
+    switch (Editor->selectedType) {
+    case Circle:
+      if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_S)) {
+        Editor->scalingMode = true;
+      }
+      break;
+    case Box:
+      if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+        scalingAnchorPos = Vector2Add(
+            Editor->prefab.boxColliders.colliders[Editor->selectedIndex].pos,
+            Editor->prefab.boxColliders.colliders[Editor->selectedIndex].size);
+        if (CheckCollisionPointRec(
+                mousePos,
+                (Rectangle){scalingAnchorPos.x, scalingAnchorPos.y,
+                            scalingAnchorSize.x, scalingAnchorSize.y})) {
+          Editor->scalingMode = true;
+        }
+      }
+      break;
+    }
   }
-  if (cEditor->scalingMode && (IsMouseButtonPressed(MOUSE_BUTTON_RIGHT) ||
-                               IsMouseButtonPressed(MOUSE_BUTTON_LEFT))) {
-    cEditor->scalingMode = false;
+  if (Editor->scalingMode && (IsMouseButtonPressed(MOUSE_BUTTON_RIGHT) ||
+                              IsMouseButtonPressed(MOUSE_BUTTON_LEFT))) {
+    Editor->scalingMode = false;
   }
 
   // Update
-  if (IsMouseButtonDown(MOUSE_BUTTON_LEFT) && cEditor->selectedIndex != -1) {
-    cEditor->prefab.circleColliders.colliders[cEditor->selectedIndex].center =
-        Vector2Subtract(mousePos, cEditor->dragPoint);
+  if (IsMouseButtonDown(MOUSE_BUTTON_LEFT) && Editor->selectedIndex != -1 &&
+      !CheckCollisionPointRec(mousePosWindow, controlRec)) {
+    switch (Editor->selectedType) {
+    case Circle:
+      Editor->prefab.circleColliders.colliders[Editor->selectedIndex].center =
+          Vector2Subtract(mousePos, Editor->dragPoint);
+      break;
+    case Box:
+      Editor->prefab.boxColliders.colliders[Editor->selectedIndex].pos =
+          Vector2Subtract(mousePos, Editor->dragPoint);
+      break;
+    }
   }
-  if (cEditor->scalingMode) {
-    Vector2 pos =
-        cEditor->prefab.circleColliders.colliders[cEditor->selectedIndex]
-            .center;
-    cEditor->prefab.circleColliders.colliders[cEditor->selectedIndex].radius =
-        Clamp(pos.y - mousePos.y, 20, 500);
+  if (Editor->scalingMode) {
+    switch (Editor->selectedType) {
+    case Circle:
+      Vector2 pos =
+          Editor->prefab.circleColliders.colliders[Editor->selectedIndex]
+              .center;
+      Editor->prefab.circleColliders.colliders[Editor->selectedIndex].radius =
+          Clamp(pos.y - mousePos.y, 20, 500);
+      break;
+    case Box:
+      if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
+        Vector2Add(
+            Editor->prefab.boxColliders.colliders[Editor->selectedIndex].size,
+            Vector2Subtract(mousePos, scalingAnchorPos));
+      }
+      break;
+    }
   }
 
   // Draw
-  for (int i = 0; i < MAX_COLLIDERS_COUNT; i++) {
-    DrawCircleV(cEditor->prefab.circleColliders.colliders[i].center,
-                cEditor->prefab.circleColliders.colliders[i].radius,
-                cEditor->prefab.circleColliders.colliders[i].color);
-    if (cEditor->selectedIndex == i) {
-      DrawCircleV(
-          cEditor->prefab.circleColliders.colliders[i].center,
-          cEditor->prefab.circleColliders.colliders[i].radius,
-          Fade(cEditor->prefab.circleColliders.colliders[i].color, .5f));
+  for (int i = 0; i < Editor->prefab.circleColliders.count; i++) {
+    DrawCircleV(Editor->prefab.circleColliders.colliders[i].center,
+                Editor->prefab.circleColliders.colliders[i].radius,
+                Editor->prefab.circleColliders.colliders[i].color);
+    if (Editor->selectedType == Circle && Editor->selectedIndex == i) {
+      DrawCircleV(Editor->prefab.circleColliders.colliders[i].center,
+                  Editor->prefab.circleColliders.colliders[i].radius,
+                  Fade(Editor->prefab.circleColliders.colliders[i].color, .5f));
+    }
+  }
+  for (int i = 0; i < Editor->prefab.boxColliders.count; i++) {
+    DrawRectangleV(Editor->prefab.boxColliders.colliders[i].pos,
+                   Editor->prefab.boxColliders.colliders[i].size,
+                   DEFAULT_COLLIDER_COLLOR);
+    if (Editor->selectedType == Box && Editor->selectedIndex == i) {
+      DrawRectangleV(Editor->prefab.boxColliders.colliders[i].pos,
+                     Editor->prefab.boxColliders.colliders[i].size,
+                     Fade(DEFAULT_COLLIDER_COLLOR, .5f));
     }
   }
 }
@@ -189,8 +266,18 @@ static void SavePrefab(Prefab *prefab) {
   sprintf(path, "./res/prefabs/%s.prefab",
           GetFileNameWithoutExt(prefab->texturePath));
   SerializePrefab(prefab, path);
-  printf("Prefa serialized succsessfully\n");
 }
+
+int selectedColliderSelectDropBox = 0;
+bool isEditModeColliderSelectDropBox = false;
+float dropBoxYPos;
+
+char *textColliderSelecteDropBox = "Circle;Capsule;Box";
+typedef enum {
+  circleCollider = 0,
+  capsuleCollider,
+  boxCollider
+} colliderDropDownValues;
 
 int main(void) {
   SetTargetFPS(60);
@@ -209,42 +296,52 @@ int main(void) {
   camera.zoom = .8f;
   int zoomMode = 0;
 
-  Rectangle windowRec = {0, 0, windowWidth, windowHeight};
-  Rectangle viewRec = {0, 0, (int)windowWidth * 0.75f, windowHeight};
-  Rectangle controlRec = {(int)windowWidth * 0.75f, 0, (int)windowWidth * 0.25f,
-                          windowHeight};
-
   Texture currentTexture = {0};
   Vector2 currentTexturePos = {.0f, .0f};
 
-  CollidersEditor cEditor = {0};
-  cEditor.selectedIndex = -1;
+  CollidersEditor Editor = {0};
+  Editor.selectedIndex = -1;
   CircleCollider defaultCircleCollider = {(Vector2){.0f, .0f}, 50,
-                                          COLLIDER_DEFAULT_COLOR};
+                                          DEFAULT_COLLIDER_COLLOR};
+  CapsuleCollider defaultCapsuleCollider = {(Vector2){.0f, .0f},
+                                            (Vector2){30.0f, 30.0f}, 50.0f};
+  BoxCollieder defaultBoxCollider = {(Vector2){.0f, .0f},
+                                     (Vector2){50.0f, 50.0f}};
 
   while (!WindowShouldClose()) {
     mouseNavigation(&camera, zoomMode);
 
     BeginDrawing();
-    ClearBackground(RAYWHITE);
+    ClearBackground(LIGHTGRAY);
 
-    // UI
+    if (isEditModeColliderSelectDropBox) {
+      GuiLock();
+    } else if (!isEditModeColliderSelectDropBox) {
+      GuiUnlock();
+    }
+
+    // DRAW UI
     GuiPanel(viewRec, "view");
     GuiPanel(controlRec, "control");
     DrawRectangleRec(controlRec, GRAY);
+
+    float controlPanelVerticalOffset = 50;
+    int controlPanelVertElemCount = 0;
     if (GuiButton((Rectangle){controlRec.x + controlRec.width * 0.25f,
-                              controlRec.y + 50, controlRec.width / 2.0f, 100},
+                              controlRec.y + controlPanelVerticalOffset +
+                                  100 * controlPanelVertElemCount++,
+                              controlRec.width / 2.0f, 100},
                   "Edit Prefab")) {
       char prefabPath[MAX_PATH];
       selectFileDialog(prefabPath);
       if (IsFileExtension(prefabPath, ".prefab")) {
-        prevPrefab = cEditor.prefab;
-        if (DeserializePrefab(prefabPath, &cEditor.prefab) == 0) {
+        prevPrefab = Editor.prefab;
+        if (DeserializePrefab(prefabPath, &Editor.prefab) == 0) {
           UnloadTexture(currentTexture);
-          currentTexture = LoadTexture(cEditor.prefab.texturePath);
+          currentTexture = LoadTexture(Editor.prefab.texturePath);
           printf("Selected prefab path: %s\n", prefabPath);
         } else {
-          cEditor.prefab = prevPrefab;
+          Editor.prefab = prevPrefab;
         }
       } else {
         printf("Selected prefab path: %s\n", prefabPath);
@@ -253,14 +350,15 @@ int main(void) {
     }
 
     if (GuiButton((Rectangle){controlRec.x + controlRec.width * 0.25f,
-                              controlRec.y + 50 + 100, controlRec.width / 2.0f,
-                              100},
+                              controlRec.y + controlPanelVerticalOffset +
+                                  100 * controlPanelVertElemCount++,
+                              controlRec.width / 2.0f, 100},
                   "Select Texture")) {
       char newTexturePath[MAX_PATH];
       selectFileDialog(newTexturePath);
       if (IsFileExtension(newTexturePath, ".png")) {
         UnloadTexture(currentTexture);
-        strcpy(cEditor.prefab.texturePath, newTexturePath);
+        strcpy(Editor.prefab.texturePath, newTexturePath);
         currentTexture = LoadTexture(newTexturePath);
       }
       if (IsTextureReady(currentTexture)) {
@@ -271,35 +369,79 @@ int main(void) {
     }
 
     if (GuiButton((Rectangle){controlRec.x + controlRec.width * 0.25f,
-                              controlRec.y + 50 + 200, controlRec.width / 2.0f,
-                              100},
-                  "Add circle collider")) {
-      cEditor.prefab.circleColliders
-          .colliders[cEditor.prefab.circleColliders.count++] =
-          defaultCircleCollider;
-    }
-
-    if (GuiButton((Rectangle){controlRec.x + controlRec.width * 0.25f,
-                              controlRec.y + 50 + 300, controlRec.width / 2.0f,
-                              100},
+                              controlRec.y + controlPanelVerticalOffset +
+                                  100 * controlPanelVertElemCount++,
+                              controlRec.width / 2.0f, 100},
                   "Save Prefab")) {
-      SavePrefab(&cEditor.prefab);
+      SavePrefab(&Editor.prefab);
     }
 
+    controlPanelVertElemCount++;
+    if (GuiButton((Rectangle){controlRec.x + controlRec.width * 0.25f,
+                              controlRec.y + controlPanelVerticalOffset +
+                                  100 * controlPanelVertElemCount++ + 50,
+                              controlRec.width / 2.0f, 100},
+                  "Add collider")) {
+      switch (selectedColliderSelectDropBox) {
+      case circleCollider:
+        Editor.prefab.circleColliders
+            .colliders[Editor.prefab.circleColliders.count++] =
+            defaultCircleCollider;
+        break;
+      case capsuleCollider:
+        Editor.prefab.capsuleColliders
+            .colliders[Editor.prefab.capsuleColliders.count++] =
+            defaultCapsuleCollider;
+        break;
+      case boxCollider:
+        Editor.prefab.boxColliders
+            .colliders[Editor.prefab.boxColliders.count++] = defaultBoxCollider;
+        break;
+      }
+    }
+
+    if (GuiDropdownBox((Rectangle){controlRec.x + controlRec.width * 0.25f,
+                                   controlRec.y + controlPanelVerticalOffset +
+                                       100 * controlPanelVertElemCount++ - 100,
+                                   controlRec.width / 2.0f, 50},
+                       textColliderSelecteDropBox,
+                       &selectedColliderSelectDropBox,
+                       isEditModeColliderSelectDropBox)) {
+      isEditModeColliderSelectDropBox = !isEditModeColliderSelectDropBox;
+    }
+
+    if (Editor.selectedIndex != -1 && GuiButton((Rectangle){controlRec.x + controlRec.width * 0.25f,
+                              controlRec.y + controlPanelVerticalOffset +
+                                  100 * controlPanelVertElemCount++ + 50,
+                              controlRec.width / 2.0f, 100},
+                  "Remove collider")) {
+      switch (Editor.selectedType) {
+      case Circle:
+        assert(Editor.prefab.circleColliders.count >= 0);
+        Editor.prefab.circleColliders.count--;
+        Editor.selectedIndex = -1;
+        break;
+      case Box:
+        assert(Editor.prefab.boxColliders.count >= 0);
+        Editor.prefab.boxColliders.count--;
+        Editor.selectedIndex = -1;
+        break;
+      }
+    }
     BeginMode2D(camera);
 
-    rlPushMatrix();
-    rlTranslatef(0, 25 * 50, 0);
-    rlRotatef(90, 1, 0, 0);
-    DrawGrid(100, 50);
-    rlPopMatrix();
+    // rlPushMatrix();
+    // rlTranslatef(0, 25 * 50, 0);
+    // rlRotatef(90, 1, 0, 0);
+    // DrawGrid(100, 50);
+    // rlPopMatrix();
 
     if (IsTextureReady(currentTexture)) {
       DrawTexture(currentTexture, currentTexturePos.x, currentTexturePos.y,
                   WHITE);
     }
 
-    updateColliders(&cEditor, camera);
+    updateColliders(&Editor, camera);
 
     EndMode2D();
 
