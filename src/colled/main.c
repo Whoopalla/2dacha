@@ -37,7 +37,7 @@ Rectangle viewRec = {0, 0, (int)windowWidth * 0.75f, windowHeight};
 Rectangle controlRec = {(int)windowWidth * 0.75f, 0, (int)windowWidth * 0.25f,
                         windowHeight};
 Vector2 scalingPoint;
-Vector2 scalingAnchorSize = {50.0f, 50.0f};
+Vector2 scalingAnchorSize = {20.0f, 20.0f};
 Vector2 scalingAnchorPos;
 
 Prefab prevPrefab;
@@ -177,7 +177,7 @@ static void updateColliders(CollidersEditor *Editor, Camera2D camera) {
   }
 
   // Scaling mode
-  if (Editor->selectedIndex != -1 && !Editor->scalingMode) {
+  if (Editor->selectedIndex != -1) {
     switch (Editor->selectedType) {
     case Circle:
       if (IsKeyDown(KEY_LEFT_CONTROL) && IsKeyPressed(KEY_S)) {
@@ -189,23 +189,36 @@ static void updateColliders(CollidersEditor *Editor, Camera2D camera) {
         scalingAnchorPos = Vector2Add(
             Editor->prefab.boxColliders.colliders[Editor->selectedIndex].pos,
             Editor->prefab.boxColliders.colliders[Editor->selectedIndex].size);
+        scalingAnchorPos = Vector2Subtract(scalingAnchorPos, scalingAnchorSize);
+
+        printf("scaling anchor pos: %f %f\n", scalingAnchorPos.x,
+               scalingAnchorPos.y);
+        printf("scaling anchor size: %f %f\n", scalingAnchorSize.x,
+               scalingAnchorSize.y);
+
+        // DrawRectangle(scalingAnchorPos.x, scalingAnchorPos.y,
+        //    scalingAnchorSize.x, scalingAnchorSize.y, GREEN);
         if (CheckCollisionPointRec(
                 mousePos,
                 (Rectangle){scalingAnchorPos.x, scalingAnchorPos.y,
                             scalingAnchorSize.x, scalingAnchorSize.y})) {
           Editor->scalingMode = true;
+          printf("scaling mode for box\n");
+        } else {
+          Editor->scalingMode = false;
+          printf("scaling mode turned off\n");
         }
       }
       break;
     }
   }
-  if (Editor->scalingMode && (IsMouseButtonPressed(MOUSE_BUTTON_RIGHT) ||
-                              IsMouseButtonPressed(MOUSE_BUTTON_LEFT))) {
+  if (Editor->scalingMode && Editor->selectedIndex == -1) {
     Editor->scalingMode = false;
   }
 
   // Update
-  if (IsMouseButtonDown(MOUSE_BUTTON_LEFT) && Editor->selectedIndex != -1 &&
+  if (!Editor->scalingMode && IsMouseButtonDown(MOUSE_BUTTON_LEFT) &&
+      Editor->selectedIndex != -1 &&
       !CheckCollisionPointRec(mousePosWindow, controlRec)) {
     switch (Editor->selectedType) {
     case Circle:
@@ -229,9 +242,18 @@ static void updateColliders(CollidersEditor *Editor, Camera2D camera) {
       break;
     case Box:
       if (IsMouseButtonDown(MOUSE_BUTTON_LEFT)) {
-        Vector2Add(
+        Vector2 diff = Vector2Subtract(
+            mousePos,
+            Vector2Add(
+                Editor->prefab.boxColliders.colliders[Editor->selectedIndex]
+                    .pos,
+                Editor->prefab.boxColliders.colliders[Editor->selectedIndex]
+                    .size));
+        printf("diff: %f %f\n", diff.x, diff.y);
+        Editor->prefab.boxColliders.colliders[Editor->selectedIndex]
+            .size = Vector2Add(
             Editor->prefab.boxColliders.colliders[Editor->selectedIndex].size,
-            Vector2Subtract(mousePos, scalingAnchorPos));
+            diff);
       }
       break;
     }
@@ -410,7 +432,8 @@ int main(void) {
       isEditModeColliderSelectDropBox = !isEditModeColliderSelectDropBox;
     }
 
-    if (Editor.selectedIndex != -1 && GuiButton((Rectangle){controlRec.x + controlRec.width * 0.25f,
+    if (Editor.selectedIndex != -1 &&
+        GuiButton((Rectangle){controlRec.x + controlRec.width * 0.25f,
                               controlRec.y + controlPanelVerticalOffset +
                                   100 * controlPanelVertElemCount++ + 50,
                               controlRec.width / 2.0f, 100},
