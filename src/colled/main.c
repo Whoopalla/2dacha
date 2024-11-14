@@ -40,6 +40,8 @@ Vector2 scalingPoint;
 Vector2 scalingAnchorSize = {20.0f, 20.0f};
 Vector2 scalingAnchorPos;
 
+Texture viewBackground;
+
 Prefab prevPrefab;
 char currentTexturePath[MAX_PATH];
 static char *selectFileDialog(char *dest) {
@@ -60,7 +62,7 @@ static char *selectFileDialog(char *dest) {
     }
 
     BeginDrawing();
-    ClearBackground(GetColor(GuiGetStyle(DEFAULT, BACKGROUND_COLOR)));
+    // ClearBackground(GetColor(GuiGetStyle(DEFAULT, BACKGROUND_COLOR)));
 
     if (fileDialogState.windowActive) {
       GuiLock();
@@ -342,9 +344,15 @@ int main(void) {
       GuiUnlock();
     }
 
+    BeginMode2D(camera);
+    rlPushMatrix();
+    rlTranslatef(0, 250 * 300, 0);
+    rlRotatef(90, 1, 0, 0);
+    DrawGrid(1000, 300);
+    rlPopMatrix();
+    EndMode2D();
+
     // DRAW UI
-    GuiPanel(viewRec, "view");
-    GuiPanel(controlRec, "control");
     DrawRectangleRec(controlRec, GRAY);
 
     float controlPanelVerticalOffset = 50;
@@ -453,12 +461,6 @@ int main(void) {
     }
     BeginMode2D(camera);
 
-    // rlPushMatrix();
-    // rlTranslatef(0, 25 * 50, 0);
-    // rlRotatef(90, 1, 0, 0);
-    // DrawGrid(100, 50);
-    // rlPopMatrix();
-
     if (IsTextureReady(currentTexture)) {
       DrawTexture(currentTexture, currentTexturePos.x, currentTexturePos.y,
                   WHITE);
@@ -472,6 +474,7 @@ int main(void) {
   }
 
   UnloadTexture(currentTexture);
+  UnloadTexture(viewBackground);
   CloseWindow();
   return 0;
 }
