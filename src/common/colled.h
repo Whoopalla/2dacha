@@ -3,7 +3,7 @@
 #define MAX_PATH 100
 #define MAX_COLLIDERS_COUNT 10
 
-typedef enum { Circle, Box, Wheel } ColliderType;
+typedef enum { Circle, Box } ColliderType;
 
 typedef struct {
   ColliderType type;
@@ -12,11 +12,10 @@ typedef struct {
 typedef struct {
   Vector2 center;
   float radius;
-  Color color;
+  bool isWheel;
 } CircleCollider;
 
 typedef struct {
-  //ColliderType type;
   CircleCollider colliders[MAX_COLLIDERS_COUNT];
   int count;
 } CircleColliders;
@@ -35,10 +34,10 @@ typedef struct {
 typedef struct {
   Vector2 pos;   
   Vector2 size;
-} BoxCollieder;
+} BoxCollider;
 
 typedef struct {
-  BoxCollieder colliders[MAX_COLLIDERS_COUNT];
+  BoxCollider colliders[MAX_COLLIDERS_COUNT];
   int count;
 } BoxColliders;
 

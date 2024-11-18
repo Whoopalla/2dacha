@@ -179,6 +179,7 @@ static void updateColliders(CollidersEditor *Editor, Camera2D camera) {
   }
 
   // Scaling mode
+  // TODO: should cancel scaling when clicked on not selected elem
   if (Editor->selectedIndex != -1) {
     switch (Editor->selectedType) {
     case Circle:
@@ -235,10 +236,10 @@ static void updateColliders(CollidersEditor *Editor, Camera2D camera) {
   }
   if (Editor->scalingMode) {
     switch (Editor->selectedType) {
+      Vector2 pos;
     case Circle:
-      Vector2 pos =
-          Editor->prefab.circleColliders.colliders[Editor->selectedIndex]
-              .center;
+      pos = Editor->prefab.circleColliders.colliders[Editor->selectedIndex]
+                .center;
       Editor->prefab.circleColliders.colliders[Editor->selectedIndex].radius =
           Clamp(pos.y - mousePos.y, 20, 500);
       break;
@@ -261,15 +262,22 @@ static void updateColliders(CollidersEditor *Editor, Camera2D camera) {
     }
   }
 
-  // Draw
+  // Draw colliders
   for (int i = 0; i < Editor->prefab.circleColliders.count; i++) {
-    DrawCircleV(Editor->prefab.circleColliders.colliders[i].center,
-                Editor->prefab.circleColliders.colliders[i].radius,
-                Editor->prefab.circleColliders.colliders[i].color);
+    if (Editor->prefab.circleColliders.colliders[i].isWheel) {
+      DrawCircleV(
+          Editor->prefab.circleColliders.colliders[i].center,
+          Clamp(Editor->prefab.circleColliders.colliders[i].radius, 10, 50),
+          BLACK);
+    }
     if (Editor->selectedType == Circle && Editor->selectedIndex == i) {
       DrawCircleV(Editor->prefab.circleColliders.colliders[i].center,
                   Editor->prefab.circleColliders.colliders[i].radius,
-                  Fade(Editor->prefab.circleColliders.colliders[i].color, .5f));
+                  Fade(DEFAULT_COLLIDER_COLLOR, .5f));
+    } else {
+      DrawCircleV(Editor->prefab.circleColliders.colliders[i].center,
+                  Editor->prefab.circleColliders.colliders[i].radius,
+                  DEFAULT_COLLIDER_COLLOR);
     }
   }
   for (int i = 0; i < Editor->prefab.boxColliders.count; i++) {
@@ -325,12 +333,11 @@ int main(void) {
 
   CollidersEditor Editor = {0};
   Editor.selectedIndex = -1;
-  CircleCollider defaultCircleCollider = {(Vector2){.0f, .0f}, 50,
-                                          DEFAULT_COLLIDER_COLLOR};
+  CircleCollider defaultCircleCollider = {(Vector2){.0f, .0f}, 50, false};
   CapsuleCollider defaultCapsuleCollider = {(Vector2){.0f, .0f},
                                             (Vector2){30.0f, 30.0f}, 50.0f};
-  BoxCollieder defaultBoxCollider = {(Vector2){.0f, .0f},
-                                     (Vector2){50.0f, 50.0f}};
+  BoxCollider defaultBoxCollider = {(Vector2){.0f, .0f},
+                                    (Vector2){50.0f, 50.0f}};
 
   while (!WindowShouldClose()) {
     mouseNavigation(&camera, zoomMode);
@@ -424,6 +431,7 @@ int main(void) {
             defaultCapsuleCollider;
         break;
       case boxCollider:
+          printf("added box collider\n");
         Editor.prefab.boxColliders
             .colliders[Editor.prefab.boxColliders.count++] = defaultBoxCollider;
         break;
@@ -438,6 +446,18 @@ int main(void) {
                        &selectedColliderSelectDropBox,
                        isEditModeColliderSelectDropBox)) {
       isEditModeColliderSelectDropBox = !isEditModeColliderSelectDropBox;
+    }
+
+    GuiSetStyle(CHECKBOX, BORDER_COLOR_NORMAL, ColorToInt(BLACK));
+    if (Editor.selectedIndex != -1 && Editor.selectedType == Circle &&
+        GuiCheckBox(
+            (Rectangle){controlRec.x + controlRec.width * 0.25f,
+                        controlRec.y + controlPanelVerticalOffset +
+                            100 * controlPanelVertElemCount++,
+                        30, 30},
+            "Is a wheel",
+            &Editor.prefab.circleColliders.colliders[Editor.selectedIndex]
+                 .isWheel)) {
     }
 
     if (Editor.selectedIndex != -1 &&
@@ -459,6 +479,7 @@ int main(void) {
         break;
       }
     }
+
     BeginMode2D(camera);
 
     if (IsTextureReady(currentTexture)) {

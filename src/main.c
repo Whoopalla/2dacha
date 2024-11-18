@@ -12,8 +12,6 @@
 
 #define GROUND_CUBES_COUNT 10
 
-// TODO: convert prefab to a world obj
-
 // 128 pixels per meter is a appropriate for this scene. The boxes are 128
 // pixels wide.
 float lengthUnitsPerMeter = 128.0f;
@@ -58,18 +56,6 @@ static void DrawEntity(const Entity *entity) {
 
   Vector2 ps = {p.x, p.y};
   DrawTextureEx(entity->texture, ps, RAD2DEG * radians, 1.0f, WHITE);
-  // DrawRectanglePro(
-  //     (Rectangle){p.x, p.y, entity->extent.x * 2, entity->extent.y * 2},
-  //     (Vector2){0.0f, 0.0f}, RAD2DEG * radians, RED);
-  //
-  //  DrawCircleV(ps, 5.0f, BLACK);
-  //  p = b2Body_GetWorldPoint(entity->bodyId, (b2Vec2){0.0f, 0.0f});
-  //  ps = (Vector2){p.x, p.y};
-  //  DrawCircleV(ps, 5.0f, BLUE);
-  //  p = b2Body_GetWorldPoint(entity->bodyId,
-  //                           (b2Vec2){entity->extent.x, entity->extent.y});
-  //  ps = (Vector2){p.x, p.y};
-  //  DrawCircleV(ps, 5.0f, RED);
 }
 
 Entity EntityFromPrefab(b2WorldId worldId, Prefab *p, Vector2 pos) {
@@ -248,7 +234,7 @@ int main(void) {
     ClearBackground(DARKGRAY);
 
     // BeginMode2D(camera);
-    for (int i = 0; i < entity_count; ++i) {
+    for (int i = 0; i < (int)entity_count; ++i) {
       DrawEntity(entities + i);
       b2Vec2 pos = b2Body_GetPosition(entities[i].bodyId);
       printf("Entity x: %f y: %f\n", pos.x, pos.y);
