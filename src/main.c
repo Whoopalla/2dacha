@@ -35,6 +35,7 @@ b2WorldId worldId;
 b2Vec2 groundExtent, boxExtent, nivaExtent, wheelExtent;
 b2Polygon boxPolygon;
 Prefab wheelPrefab;
+Prefab boxPrefab;
 
 Texture groundTexture, boxTexture, nivaTexture, wheelTexture;
 
@@ -43,7 +44,7 @@ Entity EntityFromPrefab(b2WorldId worldId, Prefab *p, Vector2 pos);
 static void create_body(Vector2 loc) {
   printf("New body created at x: %f y: %f\n", loc.x, loc.y);
   Entity *entity = entities + entity_count++;
-  *entity = EntityFromPrefab(worldId, &wheelPrefab, loc);
+  *entity = EntityFromPrefab(worldId, &boxPrefab, loc);
   entity->extent = wheelExtent;
   // Create from prefab
 }
@@ -63,6 +64,7 @@ Entity EntityFromPrefab(b2WorldId worldId, Prefab *p, Vector2 pos) {
   b2BodyDef bodyDef;
   b2ShapeDef shapeDef;
   b2Circle circle;
+  b2Polygon box;
 
   bodyDef = b2DefaultBodyDef();
   bodyDef.type = b2_dynamicBody;
@@ -71,13 +73,25 @@ Entity EntityFromPrefab(b2WorldId worldId, Prefab *p, Vector2 pos) {
   res.bodyId = b2CreateBody(worldId, &bodyDef);
 
   // Circles
+  printf("circle count: %d\n", p->circleColliders.count);
   for (int i = 0; i < p->circleColliders.count; i++) {
     circle.center = *(b2Vec2 *)&p->circleColliders.colliders[i].center;
     circle.radius = p->circleColliders.colliders[i].radius;
     printf("++_+_+_+circle collider rad: %f\n", circle.radius);
+    circle.center = (b2Vec2){-p->circleColliders.colliders[i].center.x,
+                             -p->circleColliders.colliders[i].center.y};
     b2CreateCircleShape(res.bodyId, &shapeDef, &circle);
   }
   // Rects
+  printf("box count: %d\n", p->boxColliders.count);
+  for (int i = 0; i < p->boxColliders.count; i++) {
+    box = b2MakeOffsetBox(p->boxColliders.colliders[i].size.x / 2,
+                          p->boxColliders.colliders[i].size.y / 2,
+                          (b2Vec2){p->boxColliders.colliders[i].pos.x,
+                                   p->boxColliders.colliders[i].pos.y},
+                          0);
+    b2CreatePolygonShape(res.bodyId, &shapeDef, &box);
+  }
   res.texture = LoadTexture(p->texturePath);
   return res;
 }
@@ -126,6 +140,9 @@ int main(void) {
   b2Polygon groundPolygon = b2MakeBox(groundExtent.x, groundExtent.y);
   boxPolygon = b2MakeBox(boxExtent.x, boxExtent.y);
   if (DeserializePrefab("./res/prefabs/wheel.prefab", &wheelPrefab) != 0) {
+    freeAndExit(-1);
+  }
+  if (DeserializePrefab("./res/prefabs/box.prefab", &boxPrefab) != 0) {
     freeAndExit(-1);
   }
 
@@ -237,7 +254,7 @@ int main(void) {
     for (int i = 0; i < (int)entity_count; ++i) {
       DrawEntity(entities + i);
       b2Vec2 pos = b2Body_GetPosition(entities[i].bodyId);
-      printf("Entity x: %f y: %f\n", pos.x, pos.y);
+      // printf("Entity x: %f y: %f\n", pos.x, pos.y);
     }
 
     // EndMode2D();
